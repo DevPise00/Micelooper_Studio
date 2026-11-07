@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiceLooper Studio Pro — Turn Any Wireless Mouse Into a Zero-Latency Guitar Looper</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #020203;
+      --accent-moon: #B9D2F5;
+      --rim-bright: #E6F2FF;
+      --loop-sage: #5C8374;
+      --loop-mint: #93B1A6;
+      --loop-teal: #4E9F86;
+      --loop-ochre: #D99B26;
+      --rec-coral: #E05A47;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      background-color: var(--bg-void);
+      color: #F0F6FF;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 1. Fullscreen Interactive 3D Stage Canvas */
+    #stage-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      pointer-events: none;
+      transform-origin: center 75%;
+      will-change: transform;
+    }
+
+    /* Subtle Noir Vignette Overlay */
+    .noir-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: radial-gradient(
+        circle at 50% 62%,
+        rgba(2, 2, 3, 0) 58%,
+        rgba(2, 2, 3, 0.58) 86%,
+        rgba(2, 2, 3, 0.92) 100%
+      );
+    }
+
+    /* 3D Scene & Perspective Containers */
+    .scene-3d {
+      perspective: 1300px;
+      transform-style: preserve-3d;
+    }
+
+    .card-3d {
+      background: rgba(12, 16, 23, 0.56);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(185, 210, 245, 0.18);
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.78),
+        0 0 35px rgba(185, 210, 245, 0.06),
+        inset 0 1px 0 rgba(230, 242, 255, 0.16);
+      transform-style: preserve-3d;
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .card-3d:hover {
+      border-color: rgba(230, 242, 255, 0.42);
+      box-shadow:
+        0 30px 75px rgba(0, 0, 0, 0.88),
+        0 0 45px rgba(185, 210, 245, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    }
+
+    .card-3d-inner {
+      transform: translateZ(28px);
+    }
+
+    /* 3D Metallic Hero Typography */
+    .hero-title-3d {
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 0.94;
+      background: linear-gradient(180deg, #FFFFFF 0%, #D8E8FF 48%, #6E92B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 14px 36px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 28px rgba(185, 210, 245, 0.22));
+      transform-style: preserve-3d;
+      will-change: transform, opacity, filter;
+    }
+
+    .hero-sub-glow {
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 18px rgba(185, 210, 245, 0.35);
+    }
+
+    /* Scroll-driven reveal transitions */
+    .scroll-section {
+      will-change: transform, opacity;
+      transition: opacity 0.15s linear;
+    }
+
+    /* Glowing Signal Beam Animation */
+    @keyframes signalFlow {
+      0% { stroke-dashoffset: 240; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .laser-signal {
+      stroke-dasharray: 14 10;
+      animation: signalFlow 1.2s linear infinite;
+    }
+
+    @keyframes pulseHalo {
+      0%, 100% { transform: scale(1); opacity: 0.55; }
+      50% { transform: scale(1.12); opacity: 0.9; }
+    }
+
+    .rec-pulse {
+      animation: pulseHalo 1.6s ease-in-out infinite;
+    }
+
+    /* Strictly 0% Opacity Bottom Bar */
+    .bottom-bar-zero {
+      background: rgba(0, 0, 0, 0) !important;
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      pointer-events: none;
+    }
+
+    .bottom-bar-zero .interactive-pill {
+      pointer-events: auto;
+      background: rgba(12, 16, 23, 0.38);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(230, 242, 255, 0.24);
+      transition: all 0.2s ease;
+    }
+
+    .bottom-bar-zero .interactive-pill:hover {
+      background: rgba(21, 29, 40, 0.72);
+      border-color: rgba(230, 242, 255, 0.65);
+      transform: translateY(-2px);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020203;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1E293B;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="selection:bg-[#6E92B8] selection:text-[#020203]">
+
+  <!-- =========================================================================
+       1. INTERACTIVE 3D STAGE BACKGROUND LAYER (Mouse Spotlight + Mobile Scaling)
+       ========================================================================= -->
+  <canvas id="stage-canvas"></canvas>
+  <div class="noir-vignette"></div>
+
+  <!-- =========================================================================
+       TOP BORDERLESS TRANSPARENT NAVIGATION BAR (Matches Desktop App Top Bar)
+       ========================================================================= -->
+  <header class="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-4 flex items-center justify-between pointer-events-none">
+    <div class="flex items-center gap-3 pointer-events-auto">
+      <a href="#hero" class="flex items-center gap-2.5 text-white font-bold tracking-tight text-sm sm:text-base hover:opacity-80 transition">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#5C8374] shadow-[0_0_12px_#5C8374]"></span>
+        <span>MICELOOPER</span>
+        <span class="text-[10px] font-mono-code uppercase px-2 py-0.5 rounded bg-white/10 text-[#B9D2F5] border border-white/15">PRO v1.0</span>
+      </a>
+    </div>
+
+    <div class="hidden md:flex items-center gap-6 text-xs font-mono-code tracking-wider uppercase text-[#9AB0CC] pointer-events-auto">
+      <a href="#why-section" class="hover:text-white transition">Why MiceLooper</a>
+      <a href="#mouse-morph-section" class="hover:text-white transition">0.0ms Mouse Pedal</a>
+      <a href="#parallel-loops-section" class="hover:text-white transition">Parallel Loops</a>
+      <a href="#wav-export-section" class="hover:text-white transition">WAV Export</a>
+      <a href="#download-section" class="text-white font-bold hover:text-[#B9D2F5] transition">Download</a>
+    </div>
+
+    <div class="flex items-center gap-3 pointer-events-auto">
+      <button onclick="openLicenseModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#6E92B8]/30 hover:bg-[#6E92B8] text-white hover:text-[#020203] border border-[#E6F2FF]/40 transition shadow-lg">
+        🔑 Get Pro Key
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       2. CHRONOLOGICAL 3D SCROLL STORYTELLING CONTENT
+       ========================================================================= -->
+  <main class="relative z-10 pb-28">
+
+    <!-- SECTION 1: OPENING FULL-VIEWPORT 3D HERO (Disappears on Scroll Down) -->
+    <section id="hero" class="scene-3d min-h-screen w-full flex flex-col items-center justify-center px-4 sm:px-8 relative">
+      <div id="hero-3d-wrapper" class="max-w-5xl mx-auto text-center flex flex-col items-center pt-6 pb-20">
+        <!-- Floating Hardware Badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-[#B9D2F5]/30 backdrop-blur-md mb-6 shadow-[0_0_30px_rgba(185,210,245,0.12)]">
+          <span class="w-2 h-2 rounded-full bg-[#E05A47] animate-ping"></span>
+          <span class="font-mono-code text-[11px] sm:text-xs tracking-widest uppercase text-[#E6F2FF]">
+            WINDOWS 10 / 11 • WIN32 RAWINPUT HARDWARE ISOLATION
+          </span>
+        </div>
+
+        <!-- Massive 3D App Name -->
+        <h1 id="hero-giant-title" class="hero-title-3d text-5xl sm:text-7xl md:text-8xl lg:text-[6.6rem] uppercase tracking-tight select-none">
+          MICELOOPER<br />
+          <span class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-normal block mt-2">
+            STUDIO PRO
+          </span>
+        </h1>
+
+        <p class="mt-6 max-w-2xl text-sm sm:text-lg md:text-xl text-[#9AB0CC] font-normal leading-relaxed hero-sub-glow">
+          Turn any <span class="text-white font-semibold">standard 2.4 GHz wireless mouse</span> into a professional, zero-latency foot pedal guitar looper—while your main laptop cursor remains 100% free.
+        </p>
+
+        <!-- Primary Hero CTAs (Direct Auto-Download Setup + Pro License) -->
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a href="https://github.com/DevPise00/Micelooper_Studio/releases/latest/download/MiceLooper_Setup_v1.0.exe" download="MiceLooper_Setup_v1.0.exe" class="px-8 py-4 rounded-xl bg-[#E6F2FF] hover:bg-white text-[#020203] font-extrabold text-sm sm:text-base tracking-wide shadow-[0_0_40px_rgba(230,242,255,0.45)] hover:scale-105 transition flex items-center justify-center">
+            <span>Download Setup</span>
+          </a>
+          <button onclick="openLicenseModal()" class="px-7 py-4 rounded-xl bg-[#101722]/80 hover:bg-[#6E92B8] text-white hover:text-[#020203] font-bold text-sm sm:text-base border border-[#E6F2FF]/40 backdrop-blur-md transition flex items-center gap-2">
+            <span>🔑 UNLOCK PRO LICENSE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scroll Down Indicator -->
+      <a href="#why-section" id="hero-scroll-indicator" class="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-xs font-mono-code text-[#B9D2F5]/80 hover:text-white transition">
+        <span class="tracking-widest uppercase text-[10px]">Scroll Down to Explore</span>
+        <div class="w-6 h-10 rounded-full border border-[#B9D2F5]/40 flex items-start justify-center p-1.5">
+          <div class="w-1.5 h-2.5 rounded-full bg-[#E6F2FF] animate-bounce"></div>
+        </div>
+      </a>
+    </section>
+
+    <!-- SECTION 2: WHY USE MICELOOPER STUDIO PRO? (3D Tilt Cards) -->
+    <section id="why-section" class="scene-3d min-h-screen w-full flex items-center justify-center py-24 px-4 sm:px-8">
+      <div class="max-w-6xl mx-auto w-full">
+        <div class="text-center max-w-3xl mx-auto mb-14">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-[#5C8374] bg-[#5C8374]/15 border border-[#5C8374]/40 px-3.5 py-1 rounded-full">
+            01 // WHY MICELOOPER STUDIO PRO
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
+            Why Spend ₹5,000+ on a Hardware Looper Pedal?
+          </h2>
+          <p class="mt-4 text-[#9AB0CC] text-base sm:text-lg">
+            Your laptop already has a studio-grade CPU. MiceLooper bridges the missing link: giving your foot a dedicated, zero-latency hardware switch without hijacking your PC cursor.
+          </p>
+        </div>
+
+        <!-- 3D Tilt Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <!-- Card 1 -->
+          <div class="card-3d rounded-2xl p-6 sm:p-8" data-tilt-card>
+            <div class="card-3d-inner">
+              <div class="w-12 h-12 rounded-xl bg-[#6E92B8]/20 border border-[#E6F2FF]/30 flex items-center justify-center text-2xl mb-5 shadow-[0_0_20px_rgba(110,146,184,0.3)]">
+                🦶
+              </div>
+              <div class="font-mono-code text-xs text-[#B9D2F5] uppercase tracking-wider mb-1">Win32 RawInput Engine</div>
+              <h3 class="text-xl font-bold text-white mb-3">True Dual-Mouse Hardware Isolation</h3>
+              <p class="text-sm text-[#9AB0CC] leading-relaxed">
+                Tap any spare 2.4 GHz USB mouse 3 times to lock its hardware handle. It becomes a dedicated floor pedal while your laptop trackpad or main mouse works 100% normally without cursor interference.
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="card-3d rounded-2xl p-6 sm:p-8" data-tilt-card>
+            <div class="card-3d-inner">
+              <div class="w-12 h-12 rounded-xl bg-[#5C8374]/25 border border-[#93B1A6]/40 flex items-center justify-center text-2xl mb-5 shadow-[0_0_20px_rgba(92,131,116,0.35)]">
+                ⚡
+              </div>
+              <div class="font-mono-code text-xs text-[#93B1A6] uppercase tracking-wider mb-1">48kHz / 256-Block Stream</div>
+              <h3 class="text-xl font-bold text-white mb-3">Zero-Latency DSP & Auto Crossfade</h3>
+              <p class="text-sm text-[#9AB0CC] leading-relaxed">
+                Built on PortAudio real-time callback streams with automatic 512-sample latency compensation and a 10ms sine/cosine boundary crossfade so every guitar loop locks in with zero clicks or pops.
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="card-3d rounded-2xl p-6 sm:p-8" data-tilt-card>
+            <div class="card-3d-inner">
+              <div class="w-12 h-12 rounded-xl bg-[#D99B26]/20 border border-[#D99B26]/40 flex items-center justify-center text-2xl mb-5 shadow-[0_0_20px_rgba(217,155,38,0.3)]">
+                🌐
+              </div>
+              <div class="font-mono-code text-xs text-[#D99B26] uppercase tracking-wider mb-1">Global WH_MOUSE_LL Hook</div>
+              <h3 class="text-xl font-bold text-white mb-3">Works Minimized in the Background</h3>
+              <p class="text-sm text-[#9AB0CC] leading-relaxed">
+                Keep your guitar tabs, YouTube backing track, or DAW fullscreen. Your floor mouse triggers Record, Overdub, Play/Pause, and Undo globally from anywhere in Windows.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: ANIMATION OF WIRELESS MOUSE -> ZERO-LATENCY GUITAR LOOPER -->
+    <section id="mouse-morph-section" class="scene-3d min-h-screen w-full flex items-center justify-center py-24 px-4 sm:px-8">
+      <div class="max-w-6xl mx-auto w-full">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-[#B9D2F5] bg-[#6E92B8]/20 border border-[#B9D2F5]/40 px-3.5 py-1 rounded-full">
+            02 // HARDWARE TRANSFORMATION
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
+            From Wireless PC Mouse ➔ Zero-Latency Guitar Looper
+          </h2>
+        </div>
+
+        <!-- 3D Interactive Transformation Stage Card -->
+        <div class="card-3d rounded-3xl p-6 sm:p-10 relative overflow-hidden" data-tilt-card>
+          <div class="grid grid-cols-1 lg:grid-cols-11 gap-8 items-center">
+
+            <!-- Left: 3D Wireless Computer Mouse SVG Rig -->
+            <div class="lg:col-span-4 flex flex-col items-center text-center">
+              <div class="relative w-48 h-64 flex items-center justify-center">
+                <!-- Glow under mouse -->
+                <div id="mouse-pedal-glow" class="absolute inset-4 rounded-full bg-[#6E92B8]/25 blur-2xl transition-all duration-300"></div>
+                <svg id="wireless-mouse-svg" viewBox="0 0 200 280" class="w-44 h-60 relative z-10 drop-shadow-[0_20px_25px_rgba(0,0,0,0.9)] transition-transform duration-200 cursor-pointer" onclick="triggerInteractivePedalTap()">
+                  <!-- 2.4GHz Wireless Waves -->
+                  <path d="M 75 28 Q 100 10 125 28" fill="none" stroke="#B9D2F5" stroke-width="2.5" stroke-linecap="round" class=" opacity-80 animate-pulse"/>
+                  <path d="M 60 18 Q 100 -4 140 18" fill="none" stroke="#5C8374" stroke-width="2" stroke-linecap="round" class="opacity-60"/>
+                  <!-- Mouse Outer Body -->
+                  <rect x="38" y="42" width="124" height="210" rx="62" fill="#0D131C" stroke="#E6F2FF" stroke-width="2.5"/>
+                  <!-- Left Button (Interactive Foot Target) -->
+                  <path id="mouse-left-btn-svg" d="M 40 104 L 40 115 L 98 115 L 98 43 C 64 43 40 68 40 104 Z" fill="#5C8374" fill-opacity="0.45" stroke="#E6F2FF" stroke-width="2"/>
+                  <!-- Right Button -->
+                  <path d="M 102 43 L 102 115 L 160 115 L 160 104 C 160 68 136 43 102 43 Z" fill="#151D28" stroke="#9AB0CC" stroke-width="1.5"/>
+                  <!-- Scroll Wheel -->
+                  <rect x="93" y="64" width="14" height="34" rx="7" fill="#E6F2FF" stroke="#020203" stroke-width="2"/>
+                  <!-- Center Seam -->
+                  <line x1="38" y1="115" x2="162" y2="115" stroke="#3A4B63" stroke-width="2"/>
+                  <!-- LED Status Indicator -->
+                  <circle id="mouse-led-dot" cx="100" cy="145" r="5" fill="#5C8374"/>
+                  <text x="100" y="182" text-anchor="middle" fill="#E6F2FF" font-family="JetBrains Mono" font-size="11" font-weight="bold">2.4GHz FLOOR</text>
+                  <text x="100" y="198" text-anchor="middle" fill="#9AB0CC" font-family="JetBrains Mono" font-size="9">FOOT PEDAL LOCKED</text>
+                  <text x="69" y="88" text-anchor="middle" fill="#FFFFFF" font-family="JetBrains Mono" font-size="10" font-weight="bold">REC/DUB</text>
+                  <text x="131" y="88" text-anchor="middle" fill="#9AB0CC" font-family="JetBrains Mono" font-size="9">STOP/CLR</text>
+                </svg>
+              </div>
+              <span class="font-mono-code text-xs text-[#B9D2F5] uppercase tracking-wider">Step 1: Drop Any Wireless Mouse on Floor</span>
+              <button onclick="triggerInteractivePedalTap()" class="mt-3 px-4 py-2 rounded-lg bg-[#5C8374]/30 hover:bg-[#5C8374] text-white hover:text-[#020203] font-mono-code text-xs font-bold border border-[#93B1A6]/50 transition">
+                🦶 Click to Test Foot Pedal Tap
+              </button>
+            </div>
+
+            <!-- Center: Animated Laser DSP Signal Bridge & Zero-Latency Counter -->
+            <div class="lg:col-span-3 flex flex-col items-center justify-center py-4">
+              <div class="w-full flex flex-col items-center">
+                <div class="px-4 py-2 rounded-xl bg-[#020203]/90 border border-[#5C8374] shadow-[0_0_25px_rgba(92,131,116,0.4)] mb-3 text-center">
+                  <div class="font-mono-code text-[10px] text-[#9AB0CC] uppercase">DSP Loop Lock Latency</div>
+                  <div class="font-mono-code text-2xl sm:text-3xl font-extrabold text-[#93B1A6]">
+                    <span id="latency-counter">0.0</span> <span class="text-sm">ms</span>
+                  </div>
+                </div>
+
+                <svg viewBox="0 0 260 60" class="w-full max-w-[260px] h-14">
+                  <defs>
+                    <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#6E92B8"/>
+                      <stop offset="50%" stop-color="#E6F2FF"/>
+                      <stop offset="100%" stop-color="#5C8374"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Base Guide Line -->
+                  <line x1="10" y1="30" x2="250" y2="30" stroke="#1E293B" stroke-width="4" stroke-linecap="round"/>
+                  <!-- Animated Laser Signal -->
+                  <path d="M 10 30 L 65 30 L 80 12 L 95 48 L 112 8 L 130 52 L 145 18 L 160 40 L 175 30 L 250 30" fill="none" stroke="url(#beamGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="laser-signal"/>
+                </svg>
+
+                <span class="font-mono-code text-[11px] text-[#E6F2FF] tracking-widest uppercase mt-1">
+                  512-Sample Auto Phase Sync
+                </span>
+              </div>
+            </div>
+
+            <!-- Right: Live Looper Ring Receiver -->
+            <div class="lg:col-span-4 flex flex-col items-center text-center">
+              <div class="relative w-56 h-56 flex items-center justify-center">
+                <svg viewBox="0 0 220 220" class="w-52 h-52">
+                  <!-- Outer Halo -->
+                  <circle cx="110" cy="110" r="92" fill="none" stroke="#E6F2FF" stroke-opacity="0.12" stroke-width="3" stroke-dasharray="8 6"/>
+                  <!-- Background Ring -->
+                  <circle cx="110" cy="110" r="78" fill="#06090E" fill-opacity="0.7" stroke="#182230" stroke-width="14"/>
+                  <!-- Animated Progress Ring -->
+                  <circle id="demo-looper-arc" cx="110" cy="110" r="78" fill="none" stroke="#5C8374" stroke-width="14" stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="110" transform="rotate(-90 110 110)"/>
+                  <!-- Center Readout -->
+                  <text id="demo-looper-title" x="110" y="92" text-anchor="middle" fill="#FFFFFF" font-family="Inter" font-size="16" font-weight="900">LOOP 1</text>
+                  <text id="demo-looper-state" x="110" y="115" text-anchor="middle" fill="#93B1A6" font-family="JetBrains Mono" font-size="15" font-weight="bold">PLAYING 1x</text>
+                  <text id="demo-looper-sub" x="110" y="136" text-anchor="middle" fill="#9AB0CC" font-family="JetBrains Mono" font-size="10">0.0ms X-FADE LOCKED</text>
+                </svg>
+              </div>
+              <span class="font-mono-code text-xs text-[#93B1A6] uppercase tracking-wider">
+                Step 2: Instant Hands-Free Guitar Looper
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: PARALLEL MULTI-LOOP RECORDING SHOWCASE -->
+    <section id="parallel-loops-section" class="scene-3d min-h-screen w-full flex items-center justify-center py-24 px-4 sm:px-8">
+      <div class="max-w-6xl mx-auto w-full">
+        <div class="text-center max-w-3xl mx-auto mb-10">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-[#93B1A6] bg-[#5C8374]/20 border border-[#93B1A6]/40 px-3.5 py-1 rounded-full">
+            03 // MULTI-TRACK PARALLEL ENGINE
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
+            Record Multiple Parallel Loops at a Time
+          </h2>
+        </div>
+
+        <!-- 3 Responsive Horizontal Workflow Boxes (Stacks Vertically on Mobile) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
+          <!-- Step Box 1: Click & Hold Left Button to Record -->
+          <div class="card-3d rounded-2xl p-5 flex items-center gap-4 border-l-4 border-l-[#5C8374]" data-tilt-card>
+            <div class="w-12 h-12 shrink-0 rounded-xl bg-[#5C8374]/20 border border-[#5C8374]/50 flex items-center justify-center">
+              <svg viewBox="0 0 36 48" class="w-6 h-8">
+                <rect x="4" y="4" width="28" height="40" rx="14" fill="#0D131C" stroke="#E6F2FF" stroke-width="2"/>
+                <path d="M 5 18 L 18 18 L 18 5 C 10 5 5 10 5 18 Z" fill="#5C8374"/>
+                <line x1="18" y1="4" x2="18" y2="19" stroke="#E6F2FF" stroke-width="1.5"/>
+                <line x1="4" y1="19" x2="32" y2="19" stroke="#3A4B63" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-mono-code text-[10px] uppercase tracking-widest text-[#93B1A6] font-bold">STEP 01 • RECORD</div>
+              <h3 class="text-sm sm:text-base font-extrabold text-white mt-0.5">Click & Hold Left Button to Record</h3>
+              <p class="text-xs text-[#9AB0CC] mt-0.5">Release to lock your base guitar loop with a 10ms crossfade.</p>
+            </div>
+          </div>
+
+          <!-- Step Box 2: Repeat for Overdub -->
+          <div class="card-3d rounded-2xl p-5 flex items-center gap-4 border-l-4 border-l-[#D99B26]" data-tilt-card>
+            <div class="w-12 h-12 shrink-0 rounded-xl bg-[#D99B26]/20 border border-[#D99B26]/50 flex items-center justify-center">
+              <svg viewBox="0 0 44 44" class="w-7 h-7">
+                <circle cx="17" cy="22" r="11" fill="none" stroke="#5C8374" stroke-width="3"/>
+                <circle cx="27" cy="22" r="11" fill="none" stroke="#D99B26" stroke-width="3" stroke-dasharray="45 12"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-mono-code text-[10px] uppercase tracking-widest text-[#D99B26] font-bold">STEP 02 • OVERDUB</div>
+              <h3 class="text-sm sm:text-base font-extrabold text-white mt-0.5">Repeat for Overdub</h3>
+              <p class="text-xs text-[#9AB0CC] mt-0.5">Hold Left Button again to slide tracks and layer parallel loops.</p>
+            </div>
+          </div>
+
+          <!-- Step Box 3: Click & Hold for Deleting the Loop -->
+          <div class="card-3d rounded-2xl p-5 flex items-center gap-4 border-l-4 border-l-[#E05A47]" data-tilt-card>
+            <div class="w-12 h-12 shrink-0 rounded-xl bg-[#E05A47]/20 border border-[#E05A47]/50 flex items-center justify-center">
+              <svg viewBox="0 0 36 48" class="w-6 h-8">
+                <rect x="4" y="4" width="28" height="40" rx="14" fill="#0D131C" stroke="#E6F2FF" stroke-width="2"/>
+                <path d="M 18 5 L 18 18 L 31 18 C 31 10 26 5 18 5 Z" fill="#E05A47"/>
+                <line x1="18" y1="4" x2="18" y2="19" stroke="#E6F2FF" stroke-width="1.5"/>
+                <line x1="4" y1="19" x2="32" y2="19" stroke="#3A4B63" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-mono-code text-[10px] uppercase tracking-widest text-[#E05A47] font-bold">STEP 03 • DELETE</div>
+              <h3 class="text-sm sm:text-base font-extrabold text-white mt-0.5">Click & Hold for Deleting the Loop</h3>
+              <p class="text-xs text-[#9AB0CC] mt-0.5">Hold Right Button for 2 seconds to clear all loops from memory.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact 4 Parallel Playing Loop Disks -->
+        <div id="parallel-rings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 max-w-6xl mx-auto">
+
+          <!-- LOOP 1: Sage Green (Compact) -->
+          <div class="card-3d rounded-2xl p-4 flex flex-col items-center text-center" data-tilt-card data-loop-card="1">
+            <div class="flex items-center justify-between w-full px-1 mb-2">
+              <span class="font-mono-code text-[10px] font-bold text-[#9AB0CC] bg-white/5 px-2 py-0.5 rounded">1x BASE</span>
+              <span class="text-xs font-extrabold text-[#5C8374]">LOOP 1 • RHYTHM</span>
+            </div>
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#121822" stroke-width="11"/>
+                <circle class="parallel-arc" data-speed="1" cx="80" cy="80" r="60" fill="none" stroke="#5C8374" stroke-width="11" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="80"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono-code text-xs font-bold text-white">2.8 / 4.0s</span>
+                <span class="text-[10px] text-[#9AB0CC]">Pass #12</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between w-full gap-2.5 mt-3 pt-2 border-t border-white/10">
+              <button onclick="toggleDemoMute(this, '#5C8374')" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#0C1017] text-white border border-[#5C8374] hover:bg-[#5C8374] hover:text-[#020203] transition shrink-0">
+                🔊 MUTE [1]
+              </button>
+              <div class="flex-1">
+                <div class="h-1.5 w-full rounded-full bg-[#121822] border border-[#3A4B63] overflow-hidden">
+                  <div class="h-full bg-[#5C8374] w-[78%] rounded-full"></div>
+                </div>
+                <div class="font-mono-code text-[9px] text-[#9AB0CC] text-right mt-0.5">VOL: 115%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOOP 2: Soft Mint (Compact) -->
+          <div class="card-3d rounded-2xl p-4 flex flex-col items-center text-center" data-tilt-card data-loop-card="2">
+            <div class="flex items-center justify-between w-full px-1 mb-2">
+              <span class="font-mono-code text-[10px] font-bold text-[#9AB0CC] bg-white/5 px-2 py-0.5 rounded">2x LOOP 1</span>
+              <span class="text-xs font-extrabold text-[#93B1A6]">LOOP 2 • OVERDUB LEAD</span>
+            </div>
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#121822" stroke-width="11"/>
+                <circle class="parallel-arc" data-speed="0.5" cx="80" cy="80" r="60" fill="none" stroke="#93B1A6" stroke-width="11" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="150"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono-code text-xs font-bold text-white">5.6 / 8.0s</span>
+                <span class="text-[10px] text-[#9AB0CC]">Pass #6</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between w-full gap-2.5 mt-3 pt-2 border-t border-white/10">
+              <button onclick="toggleDemoMute(this, '#93B1A6')" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#0C1017] text-white border border-[#93B1A6] hover:bg-[#93B1A6] hover:text-[#020203] transition shrink-0">
+                🔊 MUTE [2]
+              </button>
+              <div class="flex-1">
+                <div class="h-1.5 w-full rounded-full bg-[#121822] border border-[#3A4B63] overflow-hidden">
+                  <div class="h-full bg-[#93B1A6] w-[66%] rounded-full"></div>
+                </div>
+                <div class="font-mono-code text-[9px] text-[#9AB0CC] text-right mt-0.5">VOL: 100%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOOP 3: Seafoam Teal (Compact) -->
+          <div class="card-3d rounded-2xl p-4 flex flex-col items-center text-center" data-tilt-card data-loop-card="3">
+            <div class="flex items-center justify-between w-full px-1 mb-2">
+              <span class="font-mono-code text-[10px] font-bold text-[#9AB0CC] bg-white/5 px-2 py-0.5 rounded">1x LOOP 1</span>
+              <span class="text-xs font-extrabold text-[#4E9F86]">LOOP 3 • BASSLINE</span>
+            </div>
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#121822" stroke-width="11"/>
+                <circle class="parallel-arc" data-speed="1" cx="80" cy="80" r="60" fill="none" stroke="#4E9F86" stroke-width="11" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="110"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono-code text-xs font-bold text-white">2.8 / 4.0s</span>
+                <span class="text-[10px] text-[#9AB0CC]">Pass #9</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between w-full gap-2.5 mt-3 pt-2 border-t border-white/10">
+              <button onclick="toggleDemoMute(this, '#4E9F86')" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#0C1017] text-white border border-[#4E9F86] hover:bg-[#4E9F86] hover:text-[#020203] transition shrink-0">
+                🔊 MUTE [3]
+              </button>
+              <div class="flex-1">
+                <div class="h-1.5 w-full rounded-full bg-[#121822] border border-[#3A4B63] overflow-hidden">
+                  <div class="h-full bg-[#4E9F86] w-[72%] rounded-full"></div>
+                </div>
+                <div class="font-mono-code text-[9px] text-[#9AB0CC] text-right mt-0.5">VOL: 108%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOOP 4: Warm Ochre (Compact) -->
+          <div class="card-3d rounded-2xl p-4 flex flex-col items-center text-center" data-tilt-card data-loop-card="4">
+            <div class="flex items-center justify-between w-full px-1 mb-2">
+              <span class="font-mono-code text-[10px] font-bold text-[#9AB0CC] bg-white/5 px-2 py-0.5 rounded">2x LOOP 1</span>
+              <span class="text-xs font-extrabold text-[#D99B26]">LOOP 4 • HARMONY</span>
+            </div>
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="60" fill="none" stroke="#121822" stroke-width="11"/>
+                <circle class="parallel-arc" data-speed="0.5" cx="80" cy="80" r="60" fill="none" stroke="#D99B26" stroke-width="11" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="190"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono-code text-xs font-bold text-white">5.6 / 8.0s</span>
+                <span class="text-[10px] text-[#9AB0CC]">Pass #4</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between w-full gap-2.5 mt-3 pt-2 border-t border-white/10">
+              <button onclick="toggleDemoMute(this, '#D99B26')" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#0C1017] text-white border border-[#D99B26] hover:bg-[#D99B26] hover:text-[#020203] transition shrink-0">
+                🔊 MUTE [4]
+              </button>
+              <div class="flex-1">
+                <div class="h-1.5 w-full rounded-full bg-[#121822] border border-[#3A4B63] overflow-hidden">
+                  <div class="h-full bg-[#D99B26] w-[60%] rounded-full"></div>
+                </div>
+                <div class="font-mono-code text-[9px] text-[#9AB0CC] text-right mt-0.5">VOL: 90%</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: RECORD ICON TRANSFORMING INTO SAVABLE .WAV FILE -->
+    <section id="wav-export-section" class="scene-3d min-h-screen w-full flex items-center justify-center py-24 px-4 sm:px-8">
+      <div class="max-w-5xl mx-auto w-full">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-[#E05A47] bg-[#E05A47]/15 border border-[#E05A47]/40 px-3.5 py-1 rounded-full">
+            04 // STUDIO MASTER EXPORT
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
+            Instant Lossless Export
+          </h2>
+          <p class="mt-3 text-[#9AB0CC] text-base sm:text-lg">
+            Never lose a great riff. MiceLooper automatically tiles and mixes your unmuted parallel tracks into a crystal-clear 16-bit / 48kHz studio <code class="text-white">.WAV</code> file ready for your DAW or social reels.
+          </p>
+        </div>
+
+        <!-- Scroll/Interactive Morphing Pipeline Card -->
+        <div class="card-3d rounded-3xl p-8 sm:p-12" data-tilt-card>
+          <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+
+            <!-- Stage 1: Pulsing Red Record Icon -->
+            <div class="flex flex-col items-center text-center">
+              <div class="relative w-36 h-36 flex items-center justify-center">
+                <div class="absolute inset-2 rounded-full bg-[#E05A47]/30 blur-xl rec-pulse"></div>
+                <div class="w-28 h-28 rounded-full bg-[#121822] border-2 border-[#E05A47] flex flex-col items-center justify-center relative z-10 shadow-[0_0_30px_rgba(224,90,71,0.5)]">
+                  <div class="w-8 h-8 rounded-full bg-[#E05A47] mb-1"></div>
+                  <span class="font-mono-code text-[11px] font-bold text-white tracking-wider">LIVE REC</span>
+                </div>
+              </div>
+              <span class="mt-3 font-mono-code text-xs text-[#E05A47] font-bold uppercase">1. Live Parallel Loops</span>
+              <span class="text-xs text-[#9AB0CC]">32-Bit Float RAM Mix</span>
+            </div>
+
+            <!-- Stage 2: Animated Waveform Compression Morph -->
+            <div class="flex-1 flex flex-col items-center w-full">
+              <div class="font-mono-code text-[11px] text-[#B9D2F5] uppercase tracking-widest mb-2">
+                Auto-Tile & 16-Bit PCM Render
+              </div>
+              <svg viewBox="0 0 320 90" class="w-full h-24 overflow-visible">
+                <!-- Morphing Waveform Bars -->
+                <g stroke-linecap="round" stroke-width="4">
+                  <line x1="15" y1="45" x2="15" y2="45" stroke="#E05A47"><animate attributeName="y1" values="35;15;35" dur="0.9s" repeatCount="indefinite"/><animate attributeName="y2" values="55;75;55" dur="0.9s" repeatCount="indefinite"/></line>
+                  <line x1="35" y1="20" x2="35" y2="70" stroke="#E05A47"><animate attributeName="y1" values="18;38;18" dur="0.7s" repeatCount="indefinite"/><animate attributeName="y2" values="72;52;72" dur="0.7s" repeatCount="indefinite"/></line>
+                  <line x1="55" y1="10" x2="55" y2="80" stroke="#D99B26"><animate attributeName="y1" values="10;32;10" dur="1.1s" repeatCount="indefinite"/><animate attributeName="y2" values="80;58;80" dur="1.1s" repeatCount="indefinite"/></line>
+                  <line x1="75" y1="25" x2="75" y2="65" stroke="#D99B26"><animate attributeName="y1" values="28;12;28" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y2" values="62;78;62" dur="0.8s" repeatCount="indefinite"/></line>
+                  <line x1="95" y1="14" x2="95" y2="76" stroke="#5C8374"><animate attributeName="y1" values="14;34;14" dur="0.95s" repeatCount="indefinite"/><animate attributeName="y2" values="76;56;76" dur="0.95s" repeatCount="indefinite"/></line>
+                  <line x1="115" y1="22" x2="115" y2="68" stroke="#5C8374"><animate attributeName="y1" values="24;10;24" dur="0.75s" repeatCount="indefinite"/><animate attributeName="y2" values="66;80;66" dur="0.75s" repeatCount="indefinite"/></line>
+                  <line x1="135" y1="18" x2="135" y2="72" stroke="#93B1A6"><animate attributeName="y1" values="15;35;15" dur="1.05s" repeatCount="indefinite"/><animate attributeName="y2" values="75;55;75" dur="1.05s" repeatCount="indefinite"/></line>
+                  <line x1="155" y1="28" x2="155" y2="62" stroke="#93B1A6"><animate attributeName="y1" values="30;14;30" dur="0.85s" repeatCount="indefinite"/><animate attributeName="y2" values="60;76;60" dur="0.85s" repeatCount="indefinite"/></line>
+                  <line x1="175" y1="20" x2="175" y2="70" stroke="#B9D2F5"><animate attributeName="y1" values="12;30;12" dur="0.9s" repeatCount="indefinite"/><animate attributeName="y2" values="78;60;78" dur="0.9s" repeatCount="indefinite"/></line>
+                  <line x1="195" y1="30" x2="195" y2="60" stroke="#B9D2F5"><animate attributeName="y1" values="26;16;26" dur="0.7s" repeatCount="indefinite"/><animate attributeName="y2" values="64;74;64" dur="0.7s" repeatCount="indefinite"/></line>
+                </g>
+                <!-- Compression Funnel to File -->
+                <path d="M 210 20 L 295 45 L 210 70" fill="none" stroke="#E6F2FF" stroke-width="2" stroke-dasharray="6 4" class="laser-signal"/>
+                <polygon points="295,39 308,45 295,51" fill="#E6F2FF"/>
+              </svg>
+              <div class="font-mono-code text-[11px] text-[#93B1A6]">
+                ✓ Zero Clipping Limiter (-0.99 dBFS)
+              </div>
+            </div>
+
+            <!-- Stage 3: Savable .WAV Master File Icon -->
+            <div class="flex flex-col items-center text-center">
+              <div class="relative w-36 h-36 flex items-center justify-center">
+                <div class="absolute inset-2 rounded-2xl bg-[#6E92B8]/30 blur-xl"></div>
+                <svg viewBox="0 0 120 140" class="w-28 h-32 relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.85)]">
+                  <!-- File Sheet -->
+                  <path d="M 18 10 L 78 10 L 104 36 L 104 128 C 104 132 100 135 96 135 L 18 135 C 14 135 10 132 10 128 L 10 18 C 10 14 14 10 18 10 Z" fill="#101722" stroke="#E6F2FF" stroke-width="2.5"/>
+                  <!-- Folded Corner -->
+                  <path d="M 78 10 L 78 36 L 104 36" fill="#1E293B" stroke="#E6F2FF" stroke-width="2"/>
+                  <!-- WAV Badge -->
+                  <rect x="22" y="52" width="70" height="28" rx="6" fill="#5C8374" stroke="#E6F2FF" stroke-width="1.5"/>
+                  <text x="57" y="71" text-anchor="middle" fill="#FFFFFF" font-family="JetBrains Mono" font-size="16" font-weight="900">.WAV</text>
+                  <!-- Mini Waveform inside File -->
+                  <path d="M 26 102 L 36 102 L 42 90 L 48 114 L 55 86 L 62 116 L 68 94 L 74 108 L 80 102 L 90 102" fill="none" stroke="#B9D2F5" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="mt-3 font-mono-code text-xs text-[#E6F2FF] font-bold">loop_mix.wav</span>
+              <span class="text-xs text-[#9AB0CC]">Ready for DAW / Export</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: DOWNLOAD .EXE INSTALLER & UNLOCK PRO LICENSE -->
+    <section id="download-section" class="scene-3d min-h-screen w-full flex items-center justify-center py-24 px-4 sm:px-8">
+      <div class="max-w-6xl mx-auto w-full">
+        <div class="text-center max-w-3xl mx-auto mb-14">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-[#E6F2FF] bg-white/10 border border-white/25 px-3.5 py-1 rounded-full">
+            05 // GET STARTED NOW
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black tracking-tight text-white">
+            Download Free Installer & Unlock Pro
+          </h2>
+          <p class="mt-3 text-[#9AB0CC] text-base sm:text-lg">
+            Install the full application for free and test your guitar & floor pedal setup with Loop 1. Upgrade to Pro anytime with a lifetime license key.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+
+          <!-- Left Card: Free .EXE Installer Download -->
+          <div class="card-3d rounded-3xl p-8 sm:p-10 flex flex-col justify-between" data-tilt-card>
+            <div>
+              <div class="flex items-center justify-between gap-4 mb-6">
+                <span class="px-3.5 py-1 rounded-full text-xs font-mono-code font-bold bg-[#5C8374]/25 text-[#93B1A6] border border-[#5C8374]">
+                  FREE CORE INSTALLER
+                </span>
+                <span class="font-mono-code text-xs text-[#9AB0CC]">Windows 10 / 11 (64-bit)</span>
+              </div>
+
+              <h3 class="text-2xl sm:text-3xl font-black text-white">
+                MiceLooper Studio <span class="text-[#9AB0CC] font-normal text-xl">(Free Tier)</span>
+              </h3>
+              <div class="mt-2 font-mono-code text-3xl font-extrabold text-white">
+                ₹0 <span class="text-sm font-normal text-[#9AB0CC]">/ Free Forever Trial</span>
+              </div>
+
+              <ul class="mt-6 space-y-3 text-sm text-[#9AB0CC]">
+                <li class="flex items-center gap-3">
+                  <span class="text-[#93B1A6] font-bold">✓</span>
+                  <span>Full <strong class="text-white">Win32 RawInput 2.4 GHz Floor Mouse</strong> hardware isolation</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#93B1A6] font-bold">✓</span>
+                  <span>Record, Play, Overdub & Pause <strong class="text-white">LOOP 1 (Base Track)</strong></span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#93B1A6] font-bold">✓</span>
+                  <span>Real-time <strong class="text-white">Live Guitar Monitor</strong> & Input Gain Boost</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#93B1A6] font-bold">✓</span>
+                  <span>Interactive Nocturne Stage Spotlight UI</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/10">
+              <a href="https://github.com/DevPise00/Micelooper_Studio/releases/latest/download/MiceLooper_Setup_v1.0.exe" download="MiceLooper_Setup_v1.0.exe" class="w-full py-4 px-6 rounded-xl bg-[#E6F2FF] hover:bg-white text-[#020203] font-black text-center text-base tracking-wide shadow-[0_0_35px_rgba(230,242,255,0.4)] transition flex items-center justify-center">
+                <span>Download Setup</span>
+              </a>
+              <p class="mt-3 text-center font-mono-code text-[11px] text-[#9AB0CC]">
+                File: <code class="text-white">MiceLooper_Setup_v1.0.exe</code> • Digitally Verified
+              </p>
+            </div>
+          </div>
+
+          <!-- Right Card: Pro License Key Upgrade -->
+          <div class="card-3d rounded-3xl p-8 sm:p-10 flex flex-col justify-between border-[#B9D2F5]/50 relative overflow-hidden" data-tilt-card>
+            <div class="absolute -top-20 -right-20 w-52 h-52 bg-[#6E92B8]/25 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div>
+              <div class="flex items-center justify-between gap-4 mb-6">
+                <span class="px-3.5 py-1 rounded-full text-xs font-mono-code font-bold bg-[#6E92B8]/30 text-[#E6F2FF] border border-[#E6F2FF]/50">
+                  ★ STUDIO PRO LICENSE KEY
+                </span>
+                <span class="font-mono-code text-xs text-[#B9D2F5]">Lifetime Activation</span>
+              </div>
+
+              <h3 class="text-2xl sm:text-3xl font-black text-white">
+                MiceLooper Studio Pro
+              </h3>
+              <div class="mt-2 flex items-baseline gap-3">
+                <span class="font-mono-code text-3xl font-extrabold text-[#E6F2FF]">₹50</span>
+                <span class="text-sm text-[#9AB0CC]">(India UPI)</span>
+                <span class="text-[#3A4B63]">|</span>
+                <span class="font-mono-code text-2xl font-extrabold text-[#93B1A6]">$1.49</span>
+                <span class="text-sm text-[#9AB0CC]">(Global)</span>
+              </div>
+
+              <ul class="mt-6 space-y-3 text-sm text-[#9AB0CC]">
+                <li class="flex items-center gap-3">
+                  <span class="text-[#E6F2FF] font-bold">★</span>
+                  <span><strong class="text-white">Unlimited Parallel Loops:</strong> Record Loop 2, Loop 3, Loop 4, and beyond simultaneously</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#E6F2FF] font-bold">★</span>
+                  <span><strong class="text-white">Studio .WAV Mix Export:</strong> Save your layered performance as a lossless 48kHz audio file</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#E6F2FF] font-bold">★</span>
+                  <span><strong class="text-white">Multi-Track Mixing:</strong> Individual track volume sliders (0–150%) & instant number-key mutes</span>
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="text-[#E6F2FF] font-bold">★</span>
+                  <span><strong class="text-white">Instant Email Key Delivery:</strong> Offline activation inside <code class="text-white">Settings ➔ Activate Pro</code></span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/10 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a href="https://topmate.io" target="_blank" rel="noopener" class="py-3.5 px-4 rounded-xl bg-[#6E92B8] hover:bg-[#8ab0d8] text-[#020203] font-extrabold text-xs sm:text-sm text-center transition shadow-lg flex items-center justify-center gap-2">
+                  <span>🇮🇳 Buy in India (₹50 UPI)</span>
+                </a>
+                <a href="https://gumroad.com" target="_blank" rel="noopener" class="py-3.5 px-4 rounded-xl bg-[#5C8374] hover:bg-[#73a08e] text-[#020203] font-extrabold text-xs sm:text-sm text-center transition shadow-lg flex items-center justify-center gap-2">
+                  <span>🌍 Global ($1.49 Card/PayPal)</span>
+                </a>
+              </div>
+              <p class="text-center font-mono-code text-[11px] text-[#9AB0CC]">
+                Need help? Email <a href="mailto:helpdeskmicelooper@gmail.com" class="text-[#E6F2FF] underline hover:text-white">helpdeskmicelooper@gmail.com</a>
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       3. FIXED BOTTOM BAR WITH STRICTLY 0% BACKGROUND OPACITY & SCROLL-LINKED COPYRIGHT
+       ========================================================================= -->
+  <footer class="bottom-bar-zero fixed bottom-0 left-0 right-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-center">
+    <p id="scroll-copyright-text" style="opacity: 0.10;" class="font-mono-code text-[11px] sm:text-xs tracking-widest uppercase text-[#E6F2FF] text-center transition-opacity duration-75 select-none">
+      © 2026 Devanshu Gajanan Pise • MiceLooper Studio Pro. All Rights Reserved.
+    </p>
+  </footer>
+
+  <!-- =========================================================================
+       PRO LICENSE PURCHASE MODAL (Matches index2.py _open_purchase_links Popup)
+       ========================================================================= -->
+  <div id="license-modal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 bg-black/75 backdrop-blur-md">
+    <div class="card-3d rounded-2xl max-w-md w-full p-6 sm:p-8 border border-[#E6F2FF]/40 text-center relative">
+      <button onclick="closeLicenseModal()" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-white/10 hover:bg-[#E05A47] text-white font-bold text-sm transition">
+        ✕
+      </button>
+      <div class="font-mono-code text-xs text-[#B9D2F5] uppercase tracking-widest mb-1">
+        MiceLooper Studio Pro
+      </div>
+      <h3 class="text-xl sm:text-2xl font-black text-white mb-2">
+        Where are you purchasing from?
+      </h3>
+      <p class="text-xs sm:text-sm text-[#9AB0CC] mb-6">
+        Your unique 19-character key (<code class="text-white">MICE-XXXX-XXXX-XXXX</code>) is delivered immediately after checkout.
+      </p>
+
+      <div class="space-y-3">
+        <a href="https://topmate.io/devanshu_pise/2391462" target="_blank" rel="noopener" onclick="closeLicenseModal()" class="block w-full py-3.5 px-5 rounded-xl bg-[#6E92B8] hover:bg-[#85aad3] text-[#020203] font-extrabold text-sm tracking-wide transition shadow-lg">
+          🇮🇳 India — ₹50 via UPI (Topmate)
+        </a>
+        <a href="https://gumroad.com" target="_blank" rel="noopener" onclick="closeLicenseModal()" class="block w-full py-3.5 px-5 rounded-xl bg-[#5C8374] hover:bg-[#729d8c] text-[#020203] font-extrabold text-sm tracking-wide transition shadow-lg">
+          🌍 International — $1.49 via Card / PayPal (Gumroad)
+        </a>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-white/10 text-[11px] text-[#9AB0CC] font-mono-code">
+        Already have the app? Paste your key in <span class="text-white">⋮ ➔ Settings & Audio I/O</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       4. COMPLETE NOCTURNE 3D STAGE ENGINE + MOBILE COMPACTION + SCROLL CHOREOGRAPHY
+       ========================================================================= -->
+  <script>
+    // Modal Helpers
+    function openLicenseModal() {
+      const m = document.getElementById('license-modal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeLicenseModal() {
+      const m = document.getElementById('license-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    // Interactive Section 3 Foot Pedal Demo
+    let demoTapState = 0;
+    function triggerInteractivePedalTap() {
+      const btnSvg = document.getElementById('mouse-left-btn-svg');
+      const mouseSvg = document.getElementById('wireless-mouse-svg');
+      const ledDot = document.getElementById('mouse-led-dot');
+      const arc = document.getElementById('demo-looper-arc');
+      const stateTxt = document.getElementById('demo-looper-state');
+      const subTxt = document.getElementById('demo-looper-sub');
+      const titleTxt = document.getElementById('demo-looper-title');
+
+      mouseSvg.style.transform = 'scale(0.94) rotateX(10deg)';
+      setTimeout(() => { mouseSvg.style.transform = 'scale(1) rotateX(0deg)'; }, 160);
+
+      demoTapState = (demoTapState + 1) % 3;
+      if (demoTapState === 1) {
+        btnSvg.setAttribute('fill', '#E05A47');
+        ledDot.setAttribute('fill', '#E05A47');
+        arc.setAttribute('stroke', '#E05A47');
+        titleTxt.textContent = 'LOOP 2 (PARALLEL)';
+        stateTxt.textContent = 'RECORDING...';
+        stateTxt.setAttribute('fill', '#E05A47');
+        subTxt.textContent = '0.0ms HARDWARE TRIGGER';
+      } else if (demoTapState === 2) {
+        btnSvg.setAttribute('fill', '#D99B26');
+        ledDot.setAttribute('fill', '#D99B26');
+        arc.setAttribute('stroke', '#D99B26');
+        titleTxt.textContent = 'LOOP 1 + LOOP 2';
+        stateTxt.textContent = 'OVERDUB SYNC';
+        stateTxt.setAttribute('fill', '#D99B26');
+        subTxt.textContent = '10ms SINE/COSINE X-FADE';
+      } else {
+        btnSvg.setAttribute('fill', '#5C8374');
+        ledDot.setAttribute('fill', '#5C8374');
+        arc.setAttribute('stroke', '#5C8374');
+        titleTxt.textContent = 'LOOP 1';
+        stateTxt.textContent = 'PLAYING 1x';
+        stateTxt.setAttribute('fill', '#93B1A6');
+        subTxt.textContent = '0.0ms X-FADE LOCKED';
+      }
+    }
+
+    // Interactive Section 4 Mute Pill Demo
+    function toggleDemoMute(btn, activeHex) {
+      const isMuted = btn.getAttribute('data-muted') === '1';
+      const card = btn.closest('[data-loop-card]');
+      const idx = card.getAttribute('data-loop-card');
+      const arc = card.querySelector('.parallel-arc');
+      if (!isMuted) {
+        btn.setAttribute('data-muted', '1');
+        btn.textContent = `🔇 UNMUTE [${idx}]`;
+        btn.style.backgroundColor = '#E05A47';
+        btn.style.borderColor = '#E6F2FF';
+        arc.setAttribute('stroke', '#222A35');
+      } else {
+        btn.setAttribute('data-muted', '0');
+        btn.textContent = `🔊 MUTE [${idx}]`;
+        btn.style.backgroundColor = '#0C1017';
+        btn.style.borderColor = activeHex;
+        arc.setAttribute('stroke', activeHex);
+      }
+    }
+
+    // 3D Tilt Effect on Cards
+    function init3DTiltCards() {
+      const cards = document.querySelectorAll('[data-tilt-card]');
+      cards.forEach((card) => {
+        card.addEventListener('mousemove', (e) => {
+          if (window.innerWidth < 768) return;
+          const rect = card.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          card.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateZ(6px)`;
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'rotateY(0deg) rotateX(0deg) translateZ(0px)';
+        });
+      });
+    }
+
+    // =========================================================================
+    // NOCTURNE STAGE ENGINE WITH RESPONSIVE MOBILE INSTRUMENT COMPACTION
+    // =========================================================================
+    (function () {
+      const canvas = document.getElementById('stage-canvas');
+      const ctx = canvas.getContext('2d');
+
+      const instBuffer = document.createElement('canvas');
+      instBuffer.width = 460;
+      instBuffer.height = 420;
+      const bCtx = instBuffer.getContext('2d');
+
+      const floorPatternCanvas = document.createElement('canvas');
+      floorPatternCanvas.width = 512;
+      floorPatternCanvas.height = 256;
+      const fCtx = floorPatternCanvas.getContext('2d');
+
+      function generateFloorTexture() {
+        fCtx.fillStyle = '#09090b';
+        fCtx.fillRect(0, 0, 512, 256);
+
+        for (let i = 0; i < 900; i++) {
+          const x = Math.random() * 512;
+          const y = Math.random() * 256;
+          const len = 15 + Math.random() * 75;
+          const alpha = 0.015 + Math.random() * 0.04;
+          fCtx.strokeStyle = Math.random() > 0.5 ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha * 2})`;
+          fCtx.lineWidth = 0.5 + Math.random() * 1.5;
+          fCtx.beginPath();
+          fCtx.moveTo(x, y);
+          fCtx.lineTo(x + len, y + (Math.random() - 0.5) * 3);
+          fCtx.stroke();
+        }
+
+        for (let i = 0; i < 65; i++) {
+          const x = Math.random() * 512;
+          const y = Math.random() * 256;
+          const r = 8 + Math.random() * 35;
+          const grad = fCtx.createRadialGradient(x, y, 0, x, y, r);
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+          grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          fCtx.fillStyle = grad;
+          fCtx.beginPath();
+          fCtx.ellipse(x, y, r * 1.8, r * 0.5, (Math.random() - 0.5) * 0.5, 0, Math.PI * 2);
+          fCtx.fill();
+        }
+      }
+      generateFloorTexture();
+
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      const state = {
+        targetX: 0.46,
+        mainSpotX: 0.46,
+        smallSpotX: 0.50,
+        lightSourceYRatio: -0.18,
+        floorHorizonRatio: 0.68,
+        floorPlaneYRatio: 0.77,
+        mainWidth: 520,
+        mainIntensity: 0.64,
+        smallIntensity: 0.18,
+        smallMode: 'lead',
+        shadowLengthMult: 1.80,
+        colorTheme: 'moonlight',
+        autoPan: true,
+        lastMouseMoveTime: 0,
+        scrollRatio: 0
+      };
+
+      const themes = {
+        moonlight: {
+          beamRGB: '205, 226, 255',
+          smallBeamRGB: '225, 240, 255',
+          floorPoolRGB: '190, 214, 248',
+          rimRGB: '230, 242, 255',
+          tintRGB: '185, 210, 245'
+        }
+      };
+
+      const instruments = [
+        { id: 'piano',   name: 'Concert Grand Piano',          desktopX: 0.15, mobileX: 0.11, yRatio: 0.76,  baseScale: 0.98, scale: 0.98 },
+        { id: 'amps',    name: 'Classic Tube Amplifiers',      desktopX: 0.31, mobileX: 0.30, yRatio: 0.755, baseScale: 0.94, scale: 0.94 },
+        { id: 'guitars', name: 'Acoustic & Electric Guitars',  desktopX: 0.46, mobileX: 0.49, yRatio: 0.77,  baseScale: 0.96, scale: 0.96 },
+        { id: 'drums',   name: '5-Piece Acoustic Drum Set',    desktopX: 0.65, mobileX: 0.69, yRatio: 0.765, baseScale: 1.00, scale: 1.00 },
+        { id: 'violin',  name: 'Soloist Violin & Boom Mic',    desktopX: 0.83, mobileX: 0.88, yRatio: 0.775, baseScale: 0.95, scale: 0.95 }
+      ];
+
+      // Dynamically compact instruments closer together and minimize scale on mobile/tablet so all 5 fit on 1 screen
+      function updateResponsiveInstrumentLayout() {
+        const compactFactor = Math.max(0, Math.min(1, (1080 - width) / 680)); // 0 on desktop, 1 on narrow mobile
+        const mobileScaleMult = Math.max(0.42, Math.min(1.0, width / 1060));
+
+        state.mainWidth = Math.max(210, Math.min(580, width * 0.42));
+
+        instruments.forEach((inst) => {
+          // Bring instruments closer and well within screen bounds on mobile
+          inst.xRatio = inst.desktopX * (1 - compactFactor) + inst.mobileX * compactFactor;
+          inst.scale = inst.baseScale * mobileScaleMult;
+        });
+      }
+
+      const dustMotes = Array.from({ length: 80 }, () => ({
+        x: Math.random(),
+        y: Math.random() * 0.82,
+        vx: (Math.random() - 0.5) * 0.00018,
+        vy: -0.00008 - Math.random() * 0.00015,
+        size: 0.7 + Math.random() * 1.6,
+        phase: Math.random() * Math.PI * 2
+      }));
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        updateResponsiveInstrumentLayout();
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function getLightStyle(mode, illum, rimDir, alphaMult = 1) {
+        const pal = themes[state.colorTheme];
+        if (mode === 'shadow') {
+          return { fill: '#000000', stroke: '#000000', detail: '#000000', rim: '#000000', metal: '#000000' };
+        }
+        const baseL = Math.round(6 + illum * 32);
+        const midL = Math.round(10 + illum * 62);
+        const woodR = Math.round(12 + illum * 74);
+        const woodG = Math.round(9 + illum * 52);
+        const woodB = Math.round(8 + illum * 38);
+        const rimAlpha = Math.min(1, (0.08 + Math.pow(illum, 1.1) * 0.94) * alphaMult);
+        const metalAlpha = Math.min(1, (0.06 + illum * 0.78) * alphaMult);
+
+        return {
+          bodyDark: `rgb(${baseL}, ${baseL}, ${baseL + 3})`,
+          bodyMid: `rgb(${midL}, ${midL}, ${midL + 4})`,
+          woodTone: `rgb(${woodR}, ${woodG}, ${woodB})`,
+          rim: `rgba(${pal.rimRGB}, ${rimAlpha})`,
+          metal: `rgba(${pal.tintRGB}, ${metalAlpha})`,
+          faint: `rgba(${pal.tintRGB}, ${rimAlpha * 0.38})`,
+          ivory: `rgba(${pal.rimRGB}, ${0.10 + illum * 0.88})`,
+          rimShift: rimDir * 2.1
+        };
+      }
+
+      // 1. GRAND PIANO + BENCH
+      function drawPiano(g, cx, cy, mode, illum, rimDir) {
+        const s = getLightStyle(mode, illum, rimDir);
+        g.save();
+        g.translate(cx, cy);
+
+        const legX = [-68, -8, 52];
+        legX.forEach((lx) => {
+          g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+          g.beginPath();
+          g.moveTo(lx - 5, -72);
+          g.lineTo(lx + 5, -72);
+          g.lineTo(lx + 2.5, -3);
+          g.lineTo(lx - 2.5, -3);
+          g.closePath();
+          g.fill();
+
+          g.fillStyle = mode === 'shadow' ? '#000' : s.metal;
+          g.fillRect(lx - 3, -3, 6, 3);
+
+          if (mode !== 'shadow') {
+            g.strokeStyle = s.rim;
+            g.lineWidth = 1.1;
+            g.beginPath();
+            const edgeX = rimDir < 0 ? lx - 4 : lx + 4;
+            g.moveTo(edgeX, -72);
+            g.lineTo(edgeX * 0.98, -3);
+            g.stroke();
+          }
+        });
+
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2.2;
+        g.beginPath();
+        g.moveTo(-36, -72); g.lineTo(-33, -4);
+        g.moveTo(-24, -72); g.lineTo(-27, -4);
+        g.moveTo(-10, -72); g.lineTo(-30, -8);
+        g.stroke();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.ivory;
+        g.fillRect(-38, -5, 16, 3);
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.beginPath();
+        g.moveTo(-82, -72);
+        g.lineTo(-82, -96);
+        g.lineTo(-20, -96);
+        g.bezierCurveTo(10, -96, 35, -90, 66, -88);
+        g.lineTo(66, -72);
+        g.closePath();
+        g.fill();
+
+        g.beginPath();
+        g.moveTo(64, -88);
+        g.lineTo(-76, -138);
+        g.lineTo(-78, -134);
+        g.lineTo(64, -85);
+        g.closePath();
+        g.fill();
+
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 1.8;
+        g.beginPath();
+        g.moveTo(-32, -92);
+        g.lineTo(-42, -123);
+        g.stroke();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyMid;
+        g.beginPath();
+        g.moveTo(-62, -96);
+        g.lineTo(-46, -112);
+        g.lineTo(-32, -112);
+        g.lineTo(-44, -96);
+        g.closePath();
+        g.fill();
+
+        if (mode !== 'shadow') {
+          g.fillStyle = s.ivory;
+          g.fillRect(-81, -83, 18, 4.5);
+          g.fillStyle = '#050507';
+          for (let kx = -79; kx < -65; kx += 3.5) {
+            g.fillRect(kx, -84.5, 2, 2.5);
+          }
+
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.3;
+          g.beginPath();
+          g.moveTo(-76, -138);
+          g.lineTo(64, -88);
+          g.moveTo(-82, -96);
+          g.lineTo(-20, -96);
+          g.bezierCurveTo(10, -96, 35, -90, 66, -88);
+          g.stroke();
+
+          g.strokeStyle = s.faint;
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(-68, -98);
+          g.lineTo(35, -88);
+          g.stroke();
+        }
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(-114, -46, 30, 7);
+        g.fillRect(-111, -39, 3, 39);
+        g.fillRect(-89, -39, 3, 39);
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1;
+          g.strokeRect(-114, -46, 30, 6);
+        }
+
+        g.restore();
+      }
+
+      // 2. CLASSIC TUBE AMPLIFIERS
+      function drawAmplifiers(g, cx, cy, mode, illum, rimDir) {
+        const s = getLightStyle(mode, illum, rimDir);
+        g.save();
+        g.translate(cx, cy);
+
+        const cabX = -52, cabW = 58, cabH = 64;
+        g.fillStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.fillRect(cabX + 5, -4, 6, 4);
+        g.fillRect(cabX + cabW - 11, -4, 6, 4);
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.beginPath();
+        g.roundRect(cabX, -cabH - 4, cabW, cabH, 3);
+        g.fill();
+
+        const headX = cabX + 3, headW = 52, headH = 22;
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.beginPath();
+        g.roundRect(headX, -cabH - headH - 6, headW, headH, 2.5);
+        g.fill();
+
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 1.6;
+        g.beginPath();
+        g.moveTo(headX + 16, -cabH - headH - 6);
+        g.quadraticCurveTo(headX + 26, -cabH - headH - 11, headX + 36, -cabH - headH - 6);
+        g.stroke();
+
+        const comboX = 14, comboW = 46, comboH = 42;
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(comboX + 4, -3, 5, 3);
+        g.fillRect(comboX + comboW - 9, -3, 5, 3);
+        g.beginPath();
+        g.roundRect(comboX, -comboH - 3, comboW, comboH, 3);
+        g.fill();
+
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.moveTo(headX + 8, -cabH - 11);
+        g.bezierCurveTo(cabX - 18, -50, cabX - 14, -4, cabX + 20, -1);
+        g.stroke();
+
+        if (mode !== 'shadow') {
+          g.fillStyle = s.bodyMid;
+          g.fillRect(cabX + 5, -cabH + 2, cabW - 10, cabH - 12);
+
+          g.strokeStyle = s.faint;
+          g.lineWidth = 0.9;
+          const cones = [
+            [cabX + 17, -cabH + 16], [cabX + 41, -cabH + 16],
+            [cabX + 17, -cabH + 40], [cabX + 41, -cabH + 40]
+          ];
+          cones.forEach(([sx, sy]) => {
+            g.beginPath(); g.arc(sx, sy, 9.5, 0, Math.PI * 2); g.stroke();
+            g.beginPath(); g.arc(sx, sy, 2.5, 0, Math.PI * 2); g.stroke();
+          });
+
+          g.fillStyle = s.metal;
+          g.fillRect(headX + 4, -cabH - 13, headW - 8, 5);
+          g.fillStyle = s.ivory;
+          for (let kx = headX + 12; kx < headX + headW - 8; kx += 5.5) {
+            g.beginPath(); g.arc(kx, -cabH - 10.5, 1.3, 0, Math.PI * 2); g.fill();
+          }
+
+          const pilotGlow = g.createRadialGradient(headX + 8, -cabH - 10.5, 0, headX + 8, -cabH - 10.5, 7);
+          pilotGlow.addColorStop(0, 'rgba(255, 190, 90, 0.95)');
+          pilotGlow.addColorStop(0.4, 'rgba(255, 140, 40, 0.45)');
+          pilotGlow.addColorStop(1, 'rgba(255, 120, 20, 0)');
+          g.fillStyle = pilotGlow;
+          g.beginPath(); g.arc(headX + 8, -cabH - 10.5, 7, 0, Math.PI * 2); g.fill();
+
+          g.fillStyle = s.woodTone;
+          g.fillRect(comboX + 4, -comboH + 6, comboW - 8, comboH - 13);
+
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.3;
+          g.strokeRect(cabX + s.rimShift * 0.4, -cabH - 4, cabW, cabH);
+          g.strokeRect(headX + s.rimShift * 0.4, -cabH - headH - 6, headW, headH);
+          g.strokeRect(comboX + s.rimShift * 0.4, -comboH - 3, comboW, comboH);
+        }
+
+        g.restore();
+      }
+
+      // 3. ACOUSTIC & ELECTRIC GUITARS ON STANDS + BOOM MIC
+      function drawGuitars(g, cx, cy, mode, illum, rimDir) {
+        const s = getLightStyle(mode, illum, rimDir);
+        g.save();
+        g.translate(cx, cy);
+
+        g.save();
+        g.translate(-34, 0);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2.2;
+        g.beginPath();
+        g.moveTo(-18, 0); g.lineTo(0, -54); g.lineTo(18, 0);
+        g.moveTo(-12, -16); g.lineTo(12, -16);
+        g.moveTo(0, -54); g.lineTo(0, -88);
+        g.stroke();
+
+        g.rotate(-0.07);
+        g.fillStyle = mode === 'shadow' ? '#000' : s.woodTone;
+        g.beginPath();
+        g.moveTo(0, -70);
+        g.bezierCurveTo(16, -70, 19, -56, 13, -46);
+        g.bezierCurveTo(9, -40, 10, -36, 16, -30);
+        g.bezierCurveTo(25, -20, 22, -7, 0, -7);
+        g.bezierCurveTo(-22, -7, -25, -20, -16, -30);
+        g.bezierCurveTo(-10, -36, -9, -40, -13, -46);
+        g.bezierCurveTo(-19, -56, -16, -70, 0, -70);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(-2.6, -118, 5.2, 50);
+        g.beginPath();
+        g.moveTo(-3.8, -118); g.lineTo(-4.5, -133); g.lineTo(4.5, -133); g.lineTo(3.8, -118);
+        g.closePath();
+        g.fill();
+
+        if (mode !== 'shadow') {
+          g.fillStyle = '#030305';
+          g.beginPath(); g.arc(0, -48, 6.2, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = s.ivory; g.lineWidth = 0.9; g.stroke();
+
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.25;
+          g.beginPath();
+          if (rimDir <= 0) {
+            g.moveTo(0, -70);
+            g.bezierCurveTo(-16, -70, -19, -56, -13, -46);
+            g.bezierCurveTo(-10, -36, -25, -20, -16, -10);
+          } else {
+            g.moveTo(0, -70);
+            g.bezierCurveTo(16, -70, 19, -56, 13, -46);
+            g.bezierCurveTo(10, -36, 25, -20, 16, -10);
+          }
+          g.stroke();
+        }
+        g.restore();
+
+        g.save();
+        g.translate(26, 0);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2.2;
+        g.beginPath();
+        g.moveTo(-16, 0); g.lineTo(0, -50); g.lineTo(16, 0);
+        g.moveTo(0, -50); g.lineTo(0, -84);
+        g.stroke();
+
+        g.rotate(0.08);
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyMid;
+        g.beginPath();
+        g.moveTo(-4, -62);
+        g.bezierCurveTo(-9, -73, -17, -70, -15, -56);
+        g.bezierCurveTo(-13, -45, -10, -39, -15, -31);
+        g.bezierCurveTo(-22, -20, -19, -8, 0, -8);
+        g.bezierCurveTo(19, -8, 21, -20, 14, -31);
+        g.bezierCurveTo(9, -39, 12, -44, 14, -52);
+        g.bezierCurveTo(16, -64, 9, -67, 4, -59);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(-2.4, -116, 4.8, 56);
+        if (mode !== 'shadow') {
+          g.fillStyle = s.ivory;
+          g.fillRect(-5, -52, 10, 4.5);
+          g.fillRect(-5, -41, 10, 4.5);
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.25;
+          g.beginPath();
+          g.moveTo(-15, -56);
+          g.bezierCurveTo(-13, -45, -22, -20, 0, -8);
+          g.bezierCurveTo(19, -8, 21, -20, 14, -52);
+          g.stroke();
+        }
+        g.restore();
+
+        g.save();
+        g.translate(-4, 4);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(-22, 0); g.lineTo(0, -8); g.lineTo(22, 0);
+        g.moveTo(0, -8); g.lineTo(0, -138);
+        g.moveTo(-18, -128); g.lineTo(36, -152);
+        g.stroke();
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(-14, -130); g.lineTo(35, -151.5); g.stroke();
+          g.fillStyle = s.ivory;
+          g.beginPath(); g.arc(39, -153, 3.2, 0, Math.PI * 2); g.fill();
+        }
+        g.restore();
+
+        g.restore();
+      }
+
+      // 4. 5-PIECE ACOUSTIC DRUM SET
+      function drawDrumSet(g, cx, cy, mode, illum, rimDir) {
+        const s = getLightStyle(mode, illum, rimDir);
+        g.save();
+        g.translate(cx, cy);
+
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(-82, 0); g.lineTo(-68, -14); g.lineTo(-54, 0);
+        g.moveTo(-68, 0); g.lineTo(-68, -104);
+        g.moveTo(-50, 0); g.lineTo(-38, -12); g.lineTo(-26, 0);
+        g.moveTo(-38, -12); g.lineTo(-38, -58);
+        g.moveTo(-66, 0); g.lineTo(-54, -14); g.lineTo(-42, 0);
+        g.moveTo(-54, -14); g.lineTo(-54, -122);
+        g.moveTo(-62, -114); g.lineTo(-28, -144);
+        g.moveTo(46, 0); g.lineTo(62, -14); g.lineTo(78, 0);
+        g.moveTo(62, -14); g.lineTo(62, -112);
+        g.moveTo(72, -104); g.lineTo(36, -132);
+        g.moveTo(22, -46); g.lineTo(20, 0);
+        g.moveTo(38, -46); g.lineTo(38, 0);
+        g.moveTo(54, -46); g.lineTo(56, 0);
+        g.stroke();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(21, -56, 34, 38);
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyMid;
+        g.fillRect(-53, -64, 30, 13);
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.save();
+        g.translate(-16, -78); g.rotate(-0.12);
+        g.fillRect(-13, -12, 26, 20);
+        if (mode !== 'shadow') { g.strokeStyle = s.ivory; g.lineWidth = 1.4; g.strokeRect(-13, -12, 26, 20); }
+        g.restore();
+
+        g.save();
+        g.translate(16, -76); g.rotate(0.12);
+        g.fillRect(-14, -12, 28, 22);
+        if (mode !== 'shadow') { g.strokeStyle = s.ivory; g.lineWidth = 1.4; g.strokeRect(-14, -12, 28, 22); }
+        g.restore();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.beginPath(); g.arc(0, -33, 31, 0, Math.PI * 2); g.fill();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.ivory;
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.rim;
+        g.lineWidth = 2.4;
+        g.beginPath();
+        g.moveTo(-86, -93); g.lineTo(-50, -93);
+        g.moveTo(-86, -96); g.lineTo(-50, -96);
+        g.stroke();
+
+        g.save();
+        g.translate(-34, -140); g.rotate(0.18);
+        g.beginPath(); g.ellipse(0, 0, 24, 3.2, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+
+        g.save();
+        g.translate(42, -128); g.rotate(-0.2);
+        g.beginPath(); g.ellipse(0, 0, 27, 3.6, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.rim;
+          g.lineWidth = 2;
+          g.beginPath(); g.arc(0, -33, 30.5, 0, Math.PI * 2); g.stroke();
+          g.fillStyle = '#07070a';
+          g.beginPath(); g.arc(0, -33, 27.5, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = s.ivory;
+          g.lineWidth = 1.2;
+          g.beginPath(); g.arc(11, -24, 5.5, 0, Math.PI * 2); g.stroke();
+        }
+
+        g.restore();
+      }
+
+      // 5. SOLOIST VIOLIN & CHAIR
+      function drawViolinAndChair(g, cx, cy, mode, illum, rimDir) {
+        const s = getLightStyle(mode, illum, rimDir);
+        g.save();
+        g.translate(cx, cy);
+
+        g.save();
+        g.translate(32, -2);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(-18, 2); g.lineTo(-14, -36);
+        g.moveTo(18, 2);  g.lineTo(14, -36);
+        g.moveTo(13, -36); g.lineTo(17, -76);
+        g.moveTo(9, -36);  g.lineTo(13, -76);
+        g.stroke();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.beginPath(); g.roundRect(-18, -40, 34, 5, 2); g.fill();
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.ivory;
+          g.lineWidth = 1.5;
+          g.beginPath(); g.moveTo(-17, -40); g.lineTo(14, -40); g.stroke();
+        }
+        g.restore();
+
+        g.save();
+        g.translate(-24, 0);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(-16, 0); g.lineTo(0, -10); g.lineTo(16, 0);
+        g.moveTo(0, -10); g.lineTo(0, -76);
+        g.stroke();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.woodTone;
+        g.beginPath();
+        g.moveTo(0, -68);
+        g.bezierCurveTo(10, -68, 12, -58, 7, -51);
+        g.bezierCurveTo(4, -47, 4, -43, 8, -39);
+        g.bezierCurveTo(14, -33, 13, -21, 0, -21);
+        g.bezierCurveTo(-13, -21, -14, -33, -8, -39);
+        g.bezierCurveTo(-4, -43, -4, -47, -7, -51);
+        g.bezierCurveTo(-12, -58, -10, -68, 0, -68);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = mode === 'shadow' ? '#000' : s.bodyDark;
+        g.fillRect(-1.8, -94, 3.6, 36);
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.rim;
+          g.lineWidth = 1.25;
+          g.beginPath();
+          g.moveTo(0, -68);
+          g.bezierCurveTo(10, -68, 12, -58, 7, -51);
+          g.stroke();
+        }
+        g.restore();
+
+        g.save();
+        g.translate(8, 6);
+        g.strokeStyle = mode === 'shadow' ? '#000' : s.metal;
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(-24, 0); g.lineTo(0, -8); g.lineTo(24, 0);
+        g.moveTo(0, -8); g.lineTo(0, -132);
+        g.moveTo(-16, -120); g.lineTo(44, -146);
+        g.stroke();
+        if (mode !== 'shadow') {
+          g.strokeStyle = s.rim; g.lineWidth = 1.3;
+          g.beginPath(); g.moveTo(-14, -121); g.lineTo(43, -145.5); g.stroke();
+        }
+        g.restore();
+
+        g.restore();
+      }
+
+      function drawInstrumentById(id, g, cx, cy, mode, illum, rimDir) {
+        switch (id) {
+          case 'piano':   drawPiano(g, cx, cy, mode, illum, rimDir); break;
+          case 'amps':    drawAmplifiers(g, cx, cy, mode, illum, rimDir); break;
+          case 'guitars': drawGuitars(g, cx, cy, mode, illum, rimDir); break;
+          case 'drums':   drawDrumSet(g, cx, cy, mode, illum, rimDir); break;
+          case 'violin':  drawViolinAndChair(g, cx, cy, mode, illum, rimDir); break;
+        }
+      }
+
+      function renderInstrumentShadow(inst, spotX, spotIntensity, isSmallSpot) {
+        const instX = inst.xRatio * width;
+        const instY = inst.yRatio * height;
+        const lightY = state.lightSourceYRatio * height;
+
+        const dx = instX - spotX;
+        const dy = Math.max(200, instY - lightY);
+        const rawSkew = (dx / dy) * 1.45 * state.shadowLengthMult;
+        const skewX = Math.max(-2.6, Math.min(2.6, rawSkew));
+
+        const distNorm = Math.abs(dx) / (isSmallSpot ? state.mainWidth * 0.65 : state.mainWidth * 1.45);
+        const proximity = Math.max(0, 1 - Math.pow(distNorm, 1.5));
+        if (proximity <= 0.01 || spotIntensity <= 0.01) return { skewX, proximity: 0 };
+
+        const anchorX = 230;
+        const anchorY = 360;
+        bCtx.clearRect(0, 0, instBuffer.width, instBuffer.height);
+        bCtx.save();
+        bCtx.translate(anchorX, anchorY);
+        bCtx.scale(inst.scale, inst.scale);
+        drawInstrumentById(inst.id, bCtx, 0, 0, 'shadow', 0, 0);
+        bCtx.restore();
+
+        const yFlatten = (isSmallSpot ? 0.24 : 0.28 + Math.min(0.22, Math.abs(skewX) * 0.09)) * state.shadowLengthMult;
+        const shadowAlpha = (isSmallSpot ? 0.48 : 0.78) * proximity * spotIntensity;
+
+        ctx.save();
+        ctx.translate(instX, instY);
+        ctx.transform(1, 0, skewX, yFlatten, 0, 0);
+
+        ctx.globalAlpha = shadowAlpha * 0.45;
+        ctx.drawImage(instBuffer, -anchorX - 3, -anchorY + 2);
+        ctx.drawImage(instBuffer, -anchorX + 3, -anchorY + 2);
+
+        ctx.globalAlpha = shadowAlpha * 0.85;
+        ctx.drawImage(instBuffer, -anchorX, -anchorY);
+        ctx.restore();
+
+        const aoGrad = ctx.createRadialGradient(instX, instY, 4, instX, instY, 75 * inst.scale);
+        aoGrad.addColorStop(0, `rgba(0, 0, 0, ${0.85 * spotIntensity})`);
+        aoGrad.addColorStop(0.6, `rgba(0, 0, 0, ${0.42 * proximity})`);
+        aoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = aoGrad;
+        ctx.beginPath();
+        ctx.ellipse(instX, instY + 2, 75 * inst.scale, 11 * inst.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        return { skewX, proximity };
+      }
+
+      function drawForegroundMonitorsAndCables(mainX) {
+        const pal = themes[state.colorTheme];
+        const floorY = state.floorPlaneYRatio * height;
+        const mScale = Math.max(0.55, Math.min(1.0, width / 1100));
+
+        const leftMonX = width * 0.27;
+        const leftMonY = floorY + height * 0.035;
+        const leftDist = Math.abs(leftMonX - mainX) / (state.mainWidth * 1.3);
+        const leftIllum = Math.max(0.04, Math.min(1, 1 - leftDist)) * state.mainIntensity;
+
+        ctx.save();
+        ctx.translate(leftMonX, leftMonY);
+        ctx.scale(mScale, mScale);
+        ctx.fillStyle = '#060608';
+        ctx.beginPath();
+        ctx.moveTo(-26, 0); ctx.lineTo(-18, -26); ctx.lineTo(10, -28); ctx.lineTo(26, -4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = `rgba(${pal.rimRGB}, ${0.08 + leftIllum * 0.65})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-18, -26); ctx.lineTo(10, -28); ctx.lineTo(26, -4);
+        ctx.stroke();
+        ctx.restore();
+
+        const fgMonX = width * 0.54;
+        const fgMonY = floorY + height * 0.115;
+        const fgDist = Math.abs(fgMonX - mainX) / (state.mainWidth * 1.4);
+        const fgIllum = Math.max(0.05, Math.min(1, 1 - fgDist)) * state.mainIntensity;
+
+        ctx.save();
+        ctx.translate(fgMonX, fgMonY);
+        ctx.scale(mScale, mScale);
+        ctx.fillStyle = '#040406';
+        ctx.beginPath();
+        ctx.moveTo(-48, 0); ctx.lineTo(-44, -44); ctx.lineTo(44, -44); ctx.lineTo(48, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = `rgba(${pal.rimRGB}, ${0.12 + fgIllum * 0.55})`;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.moveTo(-44, -44); ctx.lineTo(44, -44); ctx.stroke();
+        ctx.restore();
+      }
+
+      function render(now) {
+        if (state.autoPan && now - state.lastMouseMoveTime > 1200) {
+          state.targetX = 0.5 + Math.sin(now * 0.00055) * 0.36;
+        }
+
+        state.mainSpotX += (state.targetX - state.mainSpotX) * 0.085;
+        const velocityOffset = (state.targetX - state.mainSpotX) * 0.65;
+        const targetSmallX = Math.max(0.06, Math.min(0.94, state.targetX + velocityOffset + Math.sin(now * 0.0018) * 0.028));
+        state.smallSpotX += (targetSmallX - state.smallSpotX) * 0.15;
+
+        const mainPx = state.mainSpotX * width;
+        const smallPx = state.smallSpotX * width;
+        const horizonY = state.floorHorizonRatio * height;
+        const floorY = state.floorPlaneYRatio * height;
+        const lightRigY = state.lightSourceYRatio * height;
+        const pal = themes[state.colorTheme];
+
+        ctx.fillStyle = '#020203';
+        ctx.fillRect(0, 0, width, height);
+
+        // Stage Floor Pool
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, horizonY - 20, width, height - horizonY + 20);
+        ctx.clip();
+
+        const pattern = ctx.createPattern(floorPatternCanvas, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, horizonY - 20, width, height - horizonY + 20);
+
+        ctx.fillStyle = 'rgba(2, 2, 3, 0.94)';
+        ctx.fillRect(0, horizonY - 20, width, height - horizonY + 20);
+
+        const poolRadiusX = state.mainWidth * 1.45;
+        const poolRadiusY = height * 0.13;
+        ctx.save();
+        ctx.translate(mainPx, floorY + 12);
+        ctx.scale(1, poolRadiusY / poolRadiusX);
+        const mainPoolGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, poolRadiusX);
+        mainPoolGrad.addColorStop(0, `rgba(${pal.floorPoolRGB}, ${0.36 * state.mainIntensity})`);
+        mainPoolGrad.addColorStop(0.35, `rgba(${pal.floorPoolRGB}, ${0.20 * state.mainIntensity})`);
+        mainPoolGrad.addColorStop(0.7, `rgba(${pal.floorPoolRGB}, ${0.06 * state.mainIntensity})`);
+        mainPoolGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = mainPoolGrad;
+        ctx.beginPath(); ctx.arc(0, 0, poolRadiusX, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.65;
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, horizonY - 20, width, height - horizonY + 20);
+        ctx.restore();
+
+        // Volumetric Overhead Spotlight Cones
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const mainBeamGrad = ctx.createLinearGradient(mainPx, 0, mainPx, floorY + 40);
+        mainBeamGrad.addColorStop(0, `rgba(${pal.beamRGB}, ${0.12 * state.mainIntensity})`);
+        mainBeamGrad.addColorStop(0.45, `rgba(${pal.beamRGB}, ${0.06 * state.mainIntensity})`);
+        mainBeamGrad.addColorStop(0.88, `rgba(${pal.beamRGB}, ${0.025 * state.mainIntensity})`);
+        mainBeamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = mainBeamGrad;
+        ctx.beginPath();
+        ctx.moveTo(mainPx - 48, lightRigY);
+        ctx.lineTo(mainPx + 48, lightRigY);
+        ctx.lineTo(mainPx + state.mainWidth * 1.25, floorY + 45);
+        ctx.lineTo(mainPx - state.mainWidth * 1.25, floorY + 45);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Shadows
+        instruments.forEach((inst) => {
+          renderInstrumentShadow(inst, mainPx, state.mainIntensity, false);
+          if (state.smallIntensity > 0.05) {
+            renderInstrumentShadow(inst, smallPx, state.smallIntensity * 0.75, true);
+          }
+        });
+
+        // Lit 3D-Enhanced Instruments
+        let closestInst = instruments[2];
+        let maxIllum = 0;
+
+        instruments.forEach((inst) => {
+          const instX = inst.xRatio * width;
+          const instY = inst.yRatio * height;
+          const distMain = Math.abs(instX - mainPx);
+          const illumMain = Math.max(0.16, 1 - Math.pow(distMain / (state.mainWidth * 1.25), 1.45)) * state.mainIntensity;
+          const distSmall = Math.abs(instX - smallPx);
+          const illumSmall = Math.max(0, 1 - Math.pow(distSmall / (state.mainWidth * 0.55), 1.4)) * state.smallIntensity;
+          const totalIllum = Math.min(1, Math.max(0.16, illumMain + illumSmall * 0.75));
+
+          if (totalIllum > maxIllum) {
+            maxIllum = totalIllum;
+            closestInst = inst;
+          }
+
+          const dominantLightX = illumSmall > illumMain ? smallPx : mainPx;
+          const rimDir = Math.max(-1, Math.min(1, (dominantLightX - instX) / 90));
+
+          // Subtle 3D elevation lift when spotlight hits an instrument directly
+          const liftY = -totalIllum * 4.5;
+
+          ctx.save();
+          ctx.translate(instX, instY + liftY);
+          ctx.scale(inst.scale * (1 + totalIllum * 0.03), inst.scale * (1 + totalIllum * 0.03));
+          drawInstrumentById(inst.id, ctx, 0, 0, 'lit', totalIllum, rimDir);
+          ctx.restore();
+        });
+
+        drawForegroundMonitorsAndCables(mainPx);
+
+        // Floating Stage Dust Motes
+        ctx.save();
+        dustMotes.forEach((m) => {
+          m.x += m.vx;
+          m.y += m.vy;
+          if (m.y < 0.05) m.y = 0.78;
+          if (m.x < 0.02) m.x = 0.98;
+          if (m.x > 0.98) m.x = 0.02;
+
+          const mx = m.x * width;
+          const my = m.y * height;
+          const beamProgress = Math.max(0.1, my / floorY);
+          const coneHalfW = state.mainWidth * beamProgress;
+          const dMain = Math.abs(mx - mainPx);
+
+          if (dMain < coneHalfW) {
+            const moteAlpha = (1 - dMain / coneHalfW) * 0.45 * state.mainIntensity;
+            const twinkle = 0.65 + 0.35 * Math.sin(now * 0.003 + m.phase);
+            ctx.fillStyle = `rgba(${pal.rimRGB}, ${moteAlpha * twinkle})`;
+            ctx.beginPath(); ctx.arc(mx, my, m.size, 0, Math.PI * 2); ctx.fill();
+          }
+        });
+        ctx.restore();
+
+        requestAnimationFrame(render);
+      }
+
+      function handlePointerMove(clientX) {
+        state.targetX = Math.max(0.06, Math.min(0.94, clientX / width));
+        state.lastMouseMoveTime = performance.now();
+      }
+
+      window.addEventListener('mousemove', (e) => {
+        handlePointerMove(e.clientX);
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 0) {
+          handlePointerMove(e.touches[0].clientX);
+        }
+      }, { passive: true });
+
+      // =========================================================================
+      // SCROLL-DRIVEN 3D DISAPPEARING HERO & CHRONOLOGICAL ANIMATIONS
+      // =========================================================================
+      const heroWrapper = document.getElementById('hero-3d-wrapper');
+      const heroScrollInd = document.getElementById('hero-scroll-indicator');
+      const latencyCounter = document.getElementById('latency-counter');
+      const copyrightText = document.getElementById('scroll-copyright-text');
+
+      function handleScrollChoreography() {
+        const scrollY = window.scrollY || window.pageYOffset;
+        const vh = Math.max(1, window.innerHeight);
+
+        // 1. Opening App Name Disappearing 3D Effect on Scroll Down
+        const heroProgress = Math.min(1, Math.max(0, scrollY / (vh * 0.72)));
+        if (heroWrapper) {
+          const scale = 1 - heroProgress * 0.28;
+          const translateZ = -heroProgress * 260;
+          const translateY = -heroProgress * 95;
+          const blurPx = heroProgress * 12;
+          const opacity = Math.max(0, 1 - heroProgress * 1.25);
+
+          heroWrapper.style.transform = `translate3d(0, ${translateY}px, ${translateZ}px) scale(${scale})`;
+          heroWrapper.style.opacity = opacity.toFixed(3);
+          heroWrapper.style.filter = `blur(${blurPx.toFixed(1)}px)`;
+          heroWrapper.style.pointerEvents = opacity < 0.15 ? 'none' : 'auto';
+        }
+        if (heroScrollInd) {
+          heroScrollInd.style.opacity = Math.max(0, 1 - heroProgress * 2.5).toFixed(2);
+        }
+
+        // 2. Subtle 3D Camera Perspective Tilt on the Stage Canvas as user scrolls down
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
+        const globalRatio = Math.min(1, Math.max(0, scrollY / maxScroll));
+        state.scrollRatio = globalRatio;
+
+        // Dynamic Bottom Copyright Opacity: 10% (0.10) at top -> 100% (1.00) at bottom
+        if (copyrightText) {
+          const dynamicOpacity = 0.10 + globalRatio * 0.90;
+          copyrightText.style.opacity = dynamicOpacity.toFixed(3);
+        }
+
+        // Sweep spotlight gently with scroll when user isn't actively moving the mouse
+        if (performance.now() - state.lastMouseMoveTime > 900) {
+          state.targetX = 0.16 + globalRatio * 0.68;
+        }
+
+        const stageScale = 1 + Math.sin(globalRatio * Math.PI) * 0.045;
+        canvas.style.transform = `scale(${stageScale.toFixed(3)})`;
+
+        // 3. Latency Counter Drop Animation (18.4ms -> 0.0ms) when Section 3 enters view
+        const morphSec = document.getElementById('mouse-morph-section');
+        if (morphSec && latencyCounter) {
+          const rect = morphSec.getBoundingClientRect();
+          const vis = Math.min(1, Math.max(0, (vh - rect.top) / (vh * 0.75)));
+          const currentLat = Math.max(0, (1 - Math.pow(vis, 1.8)) * 14.8);
+          latencyCounter.textContent = currentLat.toFixed(1);
+        }
+      }
+
+      window.addEventListener('scroll', handleScrollChoreography, { passive: true });
+
+      // Animate Parallel Loop Rings Playheads Continuously
+      function animateParallelLoops() {
+        const arcs = document.querySelectorAll('.parallel-arc');
+        const t = performance.now() * 0.001;
+        arcs.forEach((arc) => {
+          const speed = parseFloat(arc.getAttribute('data-speed') || '1');
+          const progress = (t * 0.25 * speed) % 1;
+          const offset = 377 - progress * 377;
+          arc.setAttribute('stroke-dashoffset', offset.toFixed(1));
+        });
+        requestAnimationFrame(animateParallelLoops);
+      }
+
+      window.addEventListener('load', () => {
+        init3DTiltCards();
+        handleScrollChoreography();
+        requestAnimationFrame(render);
+        requestAnimationFrame(animateParallelLoops);
+      });
+    })();
+  </script>
+</body>
+</html>
